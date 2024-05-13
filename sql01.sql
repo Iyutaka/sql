@@ -190,3 +190,74 @@ Sub RetrieveAndProcessData()
     Set rs = Nothing
     Set db = Nothing
 End Sub
+
+
+Sub ProcessCSVData()
+    Dim conn As ADODB.Connection
+    Dim rsCSV As ADODB.Recordset
+    Dim rsDB As ADODB.Recordset
+    Dim inputFile As String
+    Dim outputFile As String
+    Dim line As String
+    Dim dataA As String
+    Dim dataB As Long
+    Dim firstDigit As String
+    Dim tenthDigit As String
+    Dim sql As String
+    Dim fso As Object
+    Dim textStream As Object
+
+    ' ファイルパス設定
+    inputFile = "C:\path\to\yourfile.csv"
+    outputFile = "C:\path\to\outputfile.txt"
+
+    ' FileSystemObjectの初期化
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' テキストファイル出力の準備
+    Set textStream = fso.CreateTextFile(outputFile, True)
+
+    ' データベース接続
+    Set conn = New ADODB.Connection
+    conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\path\to\yourdatabase.accdb"
+
+    ' CSVファイルオープン
+    Set rsCSV = New ADODB.Recordset
+    rsCSV.Open "SELECT * FROM [Text;HDR=No;FMT=Delimited;CharacterSet=65001;DATABASE=" & _
+               fso.GetParentFolderName(inputFile) & "].[" & fso.GetFileName(inputFile) & "]", _
+               conn, adOpenStatic, adLockReadOnly
+
+    ' CSVデータの処理
+    Do While Not rsCSV.EOF
+        line = rsCSV.Fields(0).Value
+        firstDigit = Left(line, 1)
+        tenthDigit = Mid(line, 10, 1)
+        dataA = Mid(line, 2, 3)
+        dataB = Val(Mid(line, 5, 5))
+
+        ' データベース検索クエリ
+        sql = "SELECT C, D FROM Table1 WHERE A = '" & dataA & "' AND B = " & dataB
+        Set rsDB = New ADODB.Recordset
+        rsDB.Open sql, conn, adOpenStatic, adLockReadOnly
+
+        If Not rsDB.EOF Then
+            ' テキストファイルにデータを書き込み
+            textStream.WriteLine firstDigit & ", " & rsDB("C").Value & ", " & rsDB("D").Value & ", " & tenthDigit
+        Else
+            textStream.WriteLine firstDigit & ", " & dataA & ", " & dataB & ", " & tenthDigit ' マッチしない場合は元の値を出力
+        End If
+
+        rsDB.Close
+        rsCSV.MoveNext
+    Loop
+
+    ' オブジェクトの解放
+    rsCSV.Close
+    conn.Close
+    textStream.Close
+    Set rsDB = Nothing
+    Set rsCSV = Nothing
+    Set conn = Nothing
+    Set textStream = Nothing
+    Set fso = Nothing
+End Sub
