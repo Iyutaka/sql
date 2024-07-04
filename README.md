@@ -24,3 +24,7 @@
 #### 2024.05 VBA（SQL）のサブクエリ
 
  'accessVba_03.bas'
+
+ #### 2024.05 VBAエラーハンドリング
+
+ 'accessVba_04.bas'
